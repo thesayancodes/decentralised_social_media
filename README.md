@@ -260,6 +260,10 @@ CA7IJHQW4JPCIDTJA45BZXXQLJ4RGPFU5PZQJJXKYS6S4DYXYHOFLDI7
 
 > 🔭 **[View live on Stellar Expert →](https://stellar.expert/explorer/testnet/tx/6867794440237056#6867794440237057)**
 
+### Stellar Lab Screenshot: 
+<img width="1896" height="900" alt="image" src="https://github.com/user-attachments/assets/71cb9420-a39a-467c-aa7c-dc3fa991bebc" />
+
+
 ---
 
 ### Contract Code (Soroban / Rust)
