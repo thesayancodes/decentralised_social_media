@@ -319,12 +319,9 @@ The smart contract is deployed and verifiable on the **Stellar Testnet** via Ste
 
 </div>
 
-> 📸 **Screenshot Preview** — *(Add a screenshot of your Stellar Expert transaction page here)*
->
-> To add: Take a screenshot of `https://stellar.expert/explorer/testnet/tx/6867794440237056#6867794440237057`, save it as `assets/stellar-expert-screenshot.png` in your repo, then replace this note with:
-> ```md
-> ![Stellar Expert Screenshot](assets/stellar-expert-screenshot.png)
-> ```
+### Stellar Expert transaction Screenshot:
+<img width="1919" height="921" alt="Screenshot 2026-03-20 145355" src="https://github.com/user-attachments/assets/73afc08f-b313-4dde-8e79-5a71e8e37b8b" />
+
 
 [![View on Stellar Expert](https://img.shields.io/badge/View%20on%20Stellar%20Expert-090B0C?style=for-the-badge&logo=stellar&logoColor=white)](https://stellar.expert/explorer/testnet/tx/6867794440237056#6867794440237057)
 
