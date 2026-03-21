@@ -424,16 +424,7 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md) for full guidelines.
 
 ---
 
-## 📊 GitHub Stats
 
-<div align="center">
-
-![GitHub Stats](https://github-readme-stats.vercel.app/api?username=thesayancodes&show_icons=true&theme=tokyonight&hide_border=true&bg_color=0D1117&title_color=6C63FF&icon_color=00C9A7)
-![GitHub Streak](https://github-readme-streak-stats.herokuapp.com/?user=thesayancodes&theme=tokyonight&hide_border=true&background=0D1117&ring=6C63FF&fire=00C9A7&currStreakLabel=8B5CF6)
-
-</div>
-
----
 
 ## 🧑‍💻 Author
 
