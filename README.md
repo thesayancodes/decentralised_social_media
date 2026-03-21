@@ -446,8 +446,8 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md) for full guidelines.
 **Web3 & AI Developer**
 
 [![GitHub](https://img.shields.io/badge/GitHub-thesayancodes-181717?style=for-the-badge&logo=github)](https://github.com/thesayancodes)
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0077B5?style=for-the-badge&logo=linkedin)](https://linkedin.com/in/thesayancodes)
-[![Twitter](https://img.shields.io/badge/Twitter-Follow-1DA1F2?style=for-the-badge&logo=twitter)](https://twitter.com/thesayancodes)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0077B5?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/sayan-sadhukhan42/)
+[![Twitter](https://img.shields.io/badge/Twitter-Follow-1DA1F2?style=for-the-badge&logo=twitter)](https://x.com/sayan_1603)
 
 *Building the decentralized future, one block at a time.*
 
