@@ -253,17 +253,15 @@ npm start
 ```
 CA7IJHQW4JPCIDTJA45BZXXQLJ4RGPFU5PZQJJXKYS6S4DYXYHOFLDI7
 ```
-### Screenshot of Smart Contract:
+### 📸 Screenshot of Smart Contract:
 
 <img width="1895" height="892" alt="Screenshot 2026-03-19 152417" src="https://github.com/user-attachments/assets/a7e750de-5a6b-4f9a-be37-125c5f527ea9" />
 
 
-> 🔭 **[View live on Stellar Expert →](https://stellar.expert/explorer/testnet/tx/6867794440237056#6867794440237057)**
-
-### Stellar Lab Screenshot: 
+### 📸 Stellar Lab Screenshot: 
 <img width="1896" height="900" alt="image" src="https://github.com/user-attachments/assets/71cb9420-a39a-467c-aa7c-dc3fa991bebc" />
 
-### UI Screenshot:
+### 📸 UI Screenshot:
 <img width="1919" height="975" alt="image" src="https://github.com/user-attachments/assets/77365a25-642f-4cbb-b552-ebb61cc601fe" />
 
 
@@ -319,7 +317,7 @@ The smart contract is deployed and verifiable on the **Stellar Testnet** via Ste
 
 </div>
 
-### Stellar Expert transaction Screenshot:
+### 📸 Stellar Expert transaction Screenshot:
 <img width="1919" height="921" alt="Screenshot 2026-03-20 145355" src="https://github.com/user-attachments/assets/73afc08f-b313-4dde-8e79-5a71e8e37b8b" />
 
 
