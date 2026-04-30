@@ -124,14 +124,21 @@ export async function callContract(
 
   const prepared = rpc.assembleTransaction(tx, simulated).build();
 
-  const { signedTxXdr } = await signTransaction(prepared.toXDR(), {
-    networkPassphrase: NETWORK_PASSPHRASE,
-  });
+  // Frictionless local wallet check
+  const localSecret = typeof window !== "undefined" ? localStorage.getItem("desocial_secret") : null;
+  let txToSubmit: any;
 
-  const txToSubmit = TransactionBuilder.fromXDR(
-    signedTxXdr,
-    NETWORK_PASSPHRASE
-  );
+  if (localSecret) {
+    const kp = Keypair.fromSecret(localSecret);
+    prepared.sign(kp);
+    txToSubmit = prepared;
+  } else {
+    // Fallback to Freighter
+    const { signedTxXdr } = await signTransaction(prepared.toXDR(), {
+      networkPassphrase: NETWORK_PASSPHRASE,
+    });
+    txToSubmit = TransactionBuilder.fromXDR(signedTxXdr, NETWORK_PASSPHRASE);
+  }
 
   const result = await server.sendTransaction(txToSubmit);
 
@@ -228,18 +235,59 @@ export async function setProfile(
 }
 
 export async function getProfile(user: string, caller?: string) {
+  try {
+    const res = await fetch(`/api/sync?type=profile&address=${user}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.address) return data;
+    }
+  } catch (e) {
+    console.error("Fast DB fetch failed, falling back to chain:", e);
+  }
+
   return readContract("get_profile", [toScValAddress(user)], caller);
 }
 
 // ─── Posts ───────────────────────────────────────────────────
 
-export async function createPost(caller: string, content: string) {
-  return callContract(
+export async function createPost(caller: string, content: string, topic: string = "general", ipfsHash: string = "") {
+  // Gasless Transaction Simulation
+  // In a real app, the server would sponsor the transaction by paying the fee
+  // using an api route like /api/sponsor. We will simulate fetching the sponsored tx.
+  try {
+    await fetch('/api/sponsor', { method: 'POST' });
+  } catch(e) {}
+
+  const res = await callContract(
     "create_post",
-    [toScValAddress(caller), toScValString(content)],
+    [toScValAddress(caller), toScValString(content), toScValString(topic), toScValString(ipfsHash)],
     caller,
     true
   );
+
+  // Sync to Hybrid DB
+  try {
+    const newId = Math.floor(Math.random() * 1000000); // In real app, get from 'res'
+    await fetch('/api/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'sync_post',
+        payload: {
+          id: newId,
+          author: caller,
+          content,
+          topic,
+          ipfsHash: ipfsHash || null,
+          timestamp: Math.floor(Date.now() / 1000),
+        }
+      })
+    });
+  } catch (e) {
+    console.error("Hybrid sync failed", e);
+  }
+
+  return res;
 }
 
 export async function getPost(postId: number, caller?: string) {
@@ -255,6 +303,17 @@ export async function getPostCount(caller?: string) {
 }
 
 export async function getRecentPosts(offset: number, limit: number, caller?: string) {
+  try {
+    const res = await fetch('/api/sync?type=feed');
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.length > 0) return data;
+    }
+  } catch (e) {
+    console.error("Fast DB fetch failed, falling back to chain:", e);
+  }
+
+  // Fallback to chain
   return readContract(
     "get_recent_posts",
     [toScValU32(offset), toScValU32(limit)],
@@ -293,12 +352,28 @@ export async function getComments(
 // ─── Likes ───────────────────────────────────────────────────
 
 export async function likePost(postId: number, liker: string) {
-  return callContract(
+  const res = await callContract(
     "like_post",
     [toScValU64(BigInt(postId)), toScValAddress(liker)],
     liker,
     true
   );
+
+  // Sync to Hybrid DB
+  try {
+    await fetch('/api/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'sync_like',
+        payload: { postId, liker }
+      })
+    });
+  } catch (e) {
+    console.error("Hybrid sync failed", e);
+  }
+
+  return res;
 }
 
 export async function unlikePost(postId: number, liker: string) {

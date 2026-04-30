@@ -140,6 +140,8 @@ interface PostData {
   id: number;
   author: string;
   content: string;
+  topic?: string;
+  ipfs_hash?: string;
   timestamp: number;
   like_count: number;
   comment_count: number;
@@ -157,6 +159,8 @@ interface UserProfile {
   username: string;
   avatar_url: string;
   bio: string;
+  balance?: number;
+  streak?: number;
 }
 
 type Tab = "feed" | "explore" | "profile";
@@ -262,7 +266,17 @@ function PostCard({
       </div>
 
       {/* Content */}
+      {post.topic && (
+        <span className="inline-block mb-2 rounded-full border border-[#4fc3f7]/30 bg-[#4fc3f7]/10 px-2 py-0.5 text-[10px] font-medium text-[#4fc3f7]">
+          #{post.topic}
+        </span>
+      )}
       <p className="text-sm text-white/70 leading-relaxed mb-4 whitespace-pre-wrap">{post.content}</p>
+      {post.ipfs_hash && (
+        <div className="mb-4">
+          <img src={post.ipfs_hash} alt="Post content" className="w-full max-h-96 rounded-xl object-cover border border-white/[0.08]" />
+        </div>
+      )}
 
       {/* Actions */}
       <div className="flex items-center gap-4 border-t border-white/[0.04] pt-3">
@@ -322,6 +336,8 @@ function CommentSection({
       setLoading(false);
     }
   }, [postId]);
+
+
 
   useEffect(() => {
     loadComments();
@@ -413,6 +429,10 @@ function CreatePostBox({
   isPosting,
   content,
   onChangeContent,
+  topic,
+  onChangeTopic,
+  ipfsHash,
+  onChangeIpfsHash,
 }: {
   walletAddress: string | null;
   onConnect: () => void;
@@ -420,9 +440,36 @@ function CreatePostBox({
   isPosting: boolean;
   content: string;
   onChangeContent: (value: string) => void;
+  topic: string;
+  onChangeTopic: (value: string) => void;
+  ipfsHash: string | null;
+  onChangeIpfsHash: (value: string | null) => void;
 }) {
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const res = await fetch('/api/ipfs', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (data.success) {
+        onChangeIpfsHash(data.ipfsHash);
+      }
+    } catch (err) {
+      console.error("Upload failed", err);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleSubmit = () => {
-    if (!content.trim()) return;
+    if (!content.trim() && !ipfsHash) return;
     onPost();
   };
 
@@ -443,8 +490,32 @@ function CreatePostBox({
                 rows={3}
                 maxLength={1000}
               />
+              {ipfsHash && (
+                <div className="relative mt-2 inline-block">
+                  <img src={ipfsHash} alt="Upload preview" className="h-32 rounded-lg border border-white/[0.08] object-cover" />
+                  <button onClick={() => onChangeIpfsHash(null)} className="absolute top-2 right-2 bg-black/50 rounded-full p-1 text-white hover:bg-black/80">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                  </button>
+                </div>
+              )}
               <div className="flex items-center justify-between mt-3">
-                <span className="text-[10px] text-white/15 font-mono">{content.length}/1000</span>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={topic}
+                    onChange={(e) => onChangeTopic(e.target.value)}
+                    className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-2 py-1 text-xs text-white/70 outline-none hover:border-[#7c6cf0]/50"
+                  >
+                    <option value="general">#general</option>
+                    <option value="technology">#technology</option>
+                    <option value="memes">#memes</option>
+                    <option value="crypto">#crypto</option>
+                  </select>
+                  <label className={cn("cursor-pointer flex items-center justify-center h-7 w-7 rounded-lg border border-white/[0.08] bg-white/[0.04] hover:border-[#7c6cf0]/50 transition-colors text-white/50", isUploading && "opacity-50 pointer-events-none")}>
+                    {isUploading ? <SpinnerIcon /> : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>}
+                    <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+                  </label>
+                  <span className="text-[10px] text-white/15 font-mono">{content.length}/1000</span>
+                </div>
                 <ShimmerButton
                   onClick={handleSubmit}
                   disabled={isPosting || !content.trim()}
@@ -490,6 +561,8 @@ export default function SocialMediaUI({ walletAddress, onConnect, isConnecting }
   const [isLoadingPosts, setIsLoadingPosts] = useState(false);
   const [isPosting, setIsPosting] = useState(false);
   const [newPostContent, setNewPostContent] = useState("");
+  const [newPostTopic, setNewPostTopic] = useState("general");
+  const [newPostIpfsHash, setNewPostIpfsHash] = useState<string | null>(null);
   const [expandedComments, setExpandedComments] = useState<number | null>(null);
 
   const [userFollowerCount, setUserFollowerCount] = useState(0);
@@ -518,6 +591,8 @@ export default function SocialMediaUI({ walletAddress, onConnect, isConnecting }
           id: typeof obj.id === "bigint" ? Number(obj.id) : (obj.id as number),
           author: obj.author as string,
           content: obj.content as string,
+          topic: obj.topic as string,
+          ipfs_hash: obj.ipfsHash as string || obj.ipfs_hash as string,
           timestamp: typeof obj.timestamp === "bigint" ? Number(obj.timestamp) : (obj.timestamp as number),
           like_count: typeof obj.like_count === "bigint" ? Number(obj.like_count) : (obj.like_count as number),
           comment_count: typeof obj.comment_count === "bigint" ? Number(obj.comment_count) : (obj.comment_count as number),
@@ -602,6 +677,8 @@ export default function SocialMediaUI({ walletAddress, onConnect, isConnecting }
           username: (obj.username as string) || "",
           avatar_url: (obj.avatar_url as string) || "",
           bio: (obj.bio as string) || "",
+          balance: (obj.balance as number) || 0,
+          streak: (obj.streak as number) || 0,
         });
       } else {
         setUserProfile(null);
@@ -621,6 +698,8 @@ export default function SocialMediaUI({ walletAddress, onConnect, isConnecting }
           id: typeof obj.id === "bigint" ? Number(obj.id) : (obj.id as number),
           author: obj.author as string,
           content: obj.content as string,
+          topic: obj.topic as string,
+          ipfs_hash: obj.ipfsHash as string || obj.ipfs_hash as string,
           timestamp: typeof obj.timestamp === "bigint" ? Number(obj.timestamp) : (obj.timestamp as number),
           like_count: typeof obj.like_count === "bigint" ? Number(obj.like_count) : (obj.like_count as number),
           comment_count: typeof obj.comment_count === "bigint" ? Number(obj.comment_count) : (obj.comment_count as number),
@@ -671,6 +750,7 @@ export default function SocialMediaUI({ walletAddress, onConnect, isConnecting }
   }, [walletAddress, refreshKey]);
 
   useEffect(() => {
+    // Initial load
     if (activeTab === "feed") {
       loadFeed();
     } else if (activeTab === "explore") {
@@ -678,18 +758,33 @@ export default function SocialMediaUI({ walletAddress, onConnect, isConnecting }
     } else if (activeTab === "profile") {
       loadProfile();
     }
+
+    // Fast Polling for Real-time UX
+    let interval: NodeJS.Timeout;
+    if (activeTab === "feed" || activeTab === "explore") {
+      interval = setInterval(() => {
+        // We use setRefreshKey to trigger a background reload 
+        // without showing full page spinners.
+        setRefreshKey((k) => k + 1);
+      }, 5000);
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, [activeTab, loadFeed, loadPosts, loadProfile]);
 
   // ── Actions ──────────────────────────────────────────────
 
   const handleCreatePost = useCallback(async () => {
-    if (!walletAddress || !newPostContent.trim()) return;
+    if (!walletAddress || (!newPostContent.trim() && !newPostIpfsHash)) return;
     setIsPosting(true);
     setError(null);
     try {
-      await createPost(walletAddress, newPostContent.trim());
+      await createPost(walletAddress, newPostContent.trim(), newPostTopic, newPostIpfsHash || "");
       setNewPostContent("");
-      setSuccessMsg("Post published on-chain!");
+      setNewPostIpfsHash(null);
+      setSuccessMsg("Post published on-chain (Gasless)!");
       setTimeout(() => setSuccessMsg(null), 4000);
       setRefreshKey((k) => k + 1);
     } catch (err: unknown) {
@@ -697,7 +792,7 @@ export default function SocialMediaUI({ walletAddress, onConnect, isConnecting }
     } finally {
       setIsPosting(false);
     }
-  }, [walletAddress, newPostContent]);
+  }, [walletAddress, newPostContent, newPostTopic, newPostIpfsHash]);
 
   const handleLike = useCallback(async (postId: number) => {
     if (!walletAddress) return;
@@ -817,6 +912,10 @@ export default function SocialMediaUI({ walletAddress, onConnect, isConnecting }
                   onPost={() => { handleCreatePost(); }}
                   content={newPostContent}
                   onChangeContent={setNewPostContent}
+                  topic={newPostTopic}
+                  onChangeTopic={setNewPostTopic}
+                  ipfsHash={newPostIpfsHash}
+                  onChangeIpfsHash={setNewPostIpfsHash}
                 />
 
                 {isLoadingPosts ? (
@@ -831,8 +930,8 @@ export default function SocialMediaUI({ walletAddress, onConnect, isConnecting }
                     <p className="text-xs text-white/15">Follow people to see their posts here</p>
                   </div>
                 ) : (
-                  posts.map((post) => (
-                    <div key={post.id}>
+                  posts.map((post, index) => (
+                    <div key={post.id} className="animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
                       <PostCard
                         post={post}
                         walletAddress={walletAddress}
@@ -862,15 +961,35 @@ export default function SocialMediaUI({ walletAddress, onConnect, isConnecting }
             {/* Explore tab */}
             {activeTab === "explore" && (
               <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs text-white/25 font-medium uppercase tracking-wider">Global Timeline</span>
-                  <button
-                    onClick={() => setRefreshKey((k) => k + 1)}
-                    className="ml-auto text-white/20 hover:text-white/50 transition-colors"
-                    title="Refresh"
-                  >
-                    <RefreshIcon />
-                  </button>
+                <div className="flex flex-col gap-3 mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-white/25 font-medium uppercase tracking-wider">Global Timeline</span>
+                    <button
+                      onClick={() => setRefreshKey((k) => k + 1)}
+                      className="ml-auto text-white/20 hover:text-white/50 transition-colors"
+                      title="Refresh"
+                    >
+                      <RefreshIcon />
+                    </button>
+                  </div>
+                  
+                  {/* Community / Subreddit Filter */}
+                  <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                    {["all", "general", "technology", "memes", "crypto"].map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => setNewPostTopic(t === "all" ? "general" : t)}
+                        className={cn(
+                          "px-3 py-1.5 rounded-full text-xs font-medium border transition-colors whitespace-nowrap",
+                          (t === "all" && newPostTopic === "general" && posts.every(p => p.topic !== "all")) || newPostTopic === t
+                            ? "bg-[#7c6cf0]/20 border-[#7c6cf0]/50 text-[#7c6cf0]"
+                            : "bg-white/[0.02] border-white/[0.08] text-white/50 hover:bg-white/[0.05]"
+                        )}
+                      >
+                        {t === "all" ? "All Communities" : `#${t}`}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {isLoadingPosts ? (
@@ -882,8 +1001,10 @@ export default function SocialMediaUI({ walletAddress, onConnect, isConnecting }
                     <p className="text-sm text-white/25">No posts yet. Be the first!</p>
                   </div>
                 ) : (
-                  posts.map((post) => (
-                    <div key={post.id}>
+                  posts
+                    .filter(post => newPostTopic === "general" || newPostTopic === "all" || post.topic === newPostTopic)
+                    .map((post, index) => (
+                    <div key={post.id} className="animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
                       <PostCard
                         post={post}
                         walletAddress={walletAddress}
@@ -1002,18 +1123,24 @@ export default function SocialMediaUI({ walletAddress, onConnect, isConnecting }
                     )}
 
                     {/* Stats */}
-                    <div className="flex gap-6 border-t border-b border-white/[0.04] py-4">
-                      <div className="text-center">
-                        <p className="text-lg font-bold text-white/80">{userFollowerCount}</p>
-                        <p className="text-[10px] text-white/25 uppercase tracking-wider">Followers</p>
+                    <div className="flex flex-wrap gap-4 border-t border-b border-white/[0.04] py-5">
+                      <div className="flex-1 min-w-[100px] rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 text-center">
+                        <p className="text-xl font-bold text-white/80">{userFollowerCount}</p>
+                        <p className="text-[10px] text-white/25 uppercase tracking-wider mt-1">Followers</p>
                       </div>
-                      <div className="text-center">
-                        <p className="text-lg font-bold text-white/80">{userFollowingCount}</p>
-                        <p className="text-[10px] text-white/25 uppercase tracking-wider">Following</p>
+                      <div className="flex-1 min-w-[100px] rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 text-center">
+                        <p className="text-xl font-bold text-white/80">{userFollowingCount}</p>
+                        <p className="text-[10px] text-white/25 uppercase tracking-wider mt-1">Following</p>
                       </div>
-                      <div className="text-center">
-                        <p className="text-lg font-bold text-white/80">{posts.length}</p>
-                        <p className="text-[10px] text-white/25 uppercase tracking-wider">Posts</p>
+                      <div className="flex-1 min-w-[100px] rounded-xl border border-[#fbbf24]/20 bg-[#fbbf24]/[0.05] p-3 text-center transition-all hover:bg-[#fbbf24]/[0.08] hover:-translate-y-1 glow-warning relative overflow-hidden group">
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#fbbf24]/10 to-transparent -translate-x-full group-hover:animate-[shimmer-spin_2s_infinite]" />
+                        <p className="text-xl font-bold text-[#fbbf24] font-mono relative z-10">{userProfile?.balance || 0}</p>
+                        <p className="text-[10px] text-[#fbbf24]/60 uppercase tracking-wider mt-1 relative z-10">Tokens Earned</p>
+                      </div>
+                      <div className="flex-1 min-w-[100px] rounded-xl border border-[#f87171]/20 bg-[#f87171]/[0.05] p-3 text-center transition-all hover:bg-[#f87171]/[0.08] hover:-translate-y-1 glow-error relative overflow-hidden group">
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#f87171]/10 to-transparent -translate-x-full group-hover:animate-[shimmer-spin_2s_infinite]" />
+                        <p className="text-xl font-bold text-[#f87171] font-mono relative z-10">{userProfile?.streak || 1} 🔥</p>
+                        <p className="text-[10px] text-[#f87171]/60 uppercase tracking-wider mt-1 relative z-10">Daily Streak</p>
                       </div>
                     </div>
 

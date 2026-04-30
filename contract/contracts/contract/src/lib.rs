@@ -7,6 +7,8 @@ pub struct Post {
     pub id: u64,
     pub author: Address,
     pub content: String,
+    pub topic: String,
+    pub ipfs_hash: String,
     pub timestamp: u64,
     pub like_count: u64,
     pub comment_count: u64,
@@ -43,6 +45,44 @@ pub enum DataKey {
     FollowerCount(Address),
     FollowingCount(Address),
     Profile(Address),
+    Balance(Address),
+    Streak(Address),
+    LastActive(Address),
+}
+
+// ─── CONSTANTS ────────────────────────────────────────────────────────
+const REWARD_POST: i128 = 10;
+const REWARD_COMMENT: i128 = 2;
+const REWARD_LIKE_AUTHOR: i128 = 5;
+const REWARD_STREAK_BONUS: i128 = 20;
+const SECONDS_IN_DAY: u64 = 86400;
+
+// ─── INTERNAL HELPERS ─────────────────────────────────────────────────
+
+fn reward_user(env: &Env, user: Address, amount: i128) {
+    let current_balance: i128 = env.storage().instance().get(&DataKey::Balance(user.clone())).unwrap_or(0);
+    env.storage().instance().set(&DataKey::Balance(user), &(current_balance + amount));
+}
+
+fn update_streak(env: &Env, user: Address) {
+    let now = env.ledger().timestamp();
+    let last_active: u64 = env.storage().instance().get(&DataKey::LastActive(user.clone())).unwrap_or(0);
+    let mut streak: u32 = env.storage().instance().get(&DataKey::Streak(user.clone())).unwrap_or(0);
+
+    if last_active == 0 {
+        streak = 1;
+    } else {
+        let diff = now.saturating_sub(last_active);
+        if diff >= SECONDS_IN_DAY && diff < SECONDS_IN_DAY * 2 {
+            streak += 1;
+            reward_user(env, user.clone(), REWARD_STREAK_BONUS); // Bonus for maintaining streak
+        } else if diff >= SECONDS_IN_DAY * 2 {
+            streak = 1; // Reset streak
+        }
+    }
+    
+    env.storage().instance().set(&DataKey::LastActive(user.clone()), &now);
+    env.storage().instance().set(&DataKey::Streak(user), &streak);
 }
 
 #[contract]
@@ -69,8 +109,11 @@ impl Contract {
     // ─── POSTS (fully permissionless) ─────────────────────────────────────
 
     /// Anyone can create a post — no admin, no initialization.
-    pub fn create_post(env: Env, author: Address, content: String) -> u64 {
+    pub fn create_post(env: Env, author: Address, content: String, topic: String, ipfs_hash: String) -> u64 {
         author.require_auth();
+        update_streak(&env, author.clone());
+        reward_user(&env, author.clone(), REWARD_POST);
+
         let count_key = DataKey::PostCount;
         let post_count: u64 = env.storage().instance().get(&count_key).unwrap_or(0);
         let new_id = post_count + 1;
@@ -79,6 +122,8 @@ impl Contract {
             id: new_id,
             author: author.clone(),
             content,
+            topic,
+            ipfs_hash,
             timestamp: env.ledger().timestamp(),
             like_count: 0,
             comment_count: 0,
@@ -130,6 +175,8 @@ impl Contract {
 
     pub fn add_comment(env: Env, post_id: u64, commenter: Address, content: String) {
         commenter.require_auth();
+        update_streak(&env, commenter.clone());
+        reward_user(&env, commenter.clone(), REWARD_COMMENT);
 
         let count_key = DataKey::CommentCount(post_id);
         let comment_count: u64 = env.storage().instance().get(&count_key).unwrap_or(0);
@@ -187,6 +234,7 @@ impl Contract {
 
     pub fn like_post(env: Env, post_id: u64, liker: Address) {
         liker.require_auth();
+        update_streak(&env, liker.clone());
 
         let mut likes: Vec<Address> = env
             .storage()
@@ -207,11 +255,12 @@ impl Contract {
             .unwrap_or_else(|| panic!("post not found"));
         post.like_count = current + 1;
 
-        env.storage()
-            .instance()
-            .set(&DataKey::Likes(post_id), &likes);
+        env.storage().instance().set(&DataKey::Likes(post_id), &likes);
         env.storage().instance().set(&count_key, &(current + 1));
         env.storage().instance().set(&DataKey::Post(post_id), &post);
+
+        // Reward the post author for receiving a like
+        reward_user(&env, post.author.clone(), REWARD_LIKE_AUTHOR);
     }
 
     pub fn unlike_post(env: Env, post_id: u64, liker: Address) {
@@ -484,6 +533,16 @@ impl Contract {
             i += 1;
         }
         results
+    }
+
+    // ─── ECONOMICS ────────────────────────────────────────────────────────
+    
+    pub fn get_balance(env: Env, user: Address) -> i128 {
+        env.storage().instance().get(&DataKey::Balance(user)).unwrap_or(0)
+    }
+
+    pub fn get_streak(env: Env, user: Address) -> u32 {
+        env.storage().instance().get(&DataKey::Streak(user)).unwrap_or(0)
     }
 }
 

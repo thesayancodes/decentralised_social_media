@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Cached Profiles for instant load
+model Profile {
+  address   String @id
+  username  String
+  avatarUrl String
+  bio       String
+  followers Int    @default(0)
+  following Int    @default(0)
+  streak    Int    @default(1)
+  balance   Int    @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+model Community {
+  topic       String   @id
+  description String?
+  createdAt   DateTime @default(now())
+}
+
+// Cached Posts for instant feed
+model Post {
+  id           Int      @id
+  author       String
+  content      String
+  topic        String   @default("general")
+  timestamp    Int
+  likeCount    Int      @default(0)
+  commentCount Int      @default(0)
+  ipfsHash     String?  
+  createdAt    DateTime @default(now())
+}
+
+// Caching follow graph locally for fast queries
+model Follow {
+  follower  String
+  target    String
+  createdAt DateTime @default(now())
+
+  @@id([follower, target])
+}
+
+// Caching likes
+model Like {
+  postId    Int
+  liker     String
+  createdAt DateTime @default(now())
+
+  @@id([postId, liker])
+}

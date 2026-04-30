@@ -1,46 +1,23 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { Meteors } from "@/components/ui/meteors";
 import Navbar from "@/components/Navbar";
 import SocialMediaUI from "@/components/Contract";
-import {
-  connectWallet,
-  getWalletAddress,
-  checkConnection,
-} from "@/hooks/contract";
+import { useAuth } from "@/hooks/useAuth";
+import { LoginModal } from "@/components/LoginModal";
 
 export default function Home() {
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const [isConnecting, setIsConnecting] = useState(false);
+  const { address: walletAddress, logout, isLoaded } = useAuth();
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        if (await checkConnection()) {
-          const addr = await getWalletAddress();
-          if (addr) setWalletAddress(addr);
-        }
-      } catch {
-        /* Freighter not installed */
-      }
-    })();
-  }, []);
-
-  const handleConnect = useCallback(async () => {
-    setIsConnecting(true);
-    try {
-      setWalletAddress(await connectWallet());
-    } catch {
-      // handled in Contract component
-    } finally {
-      setIsConnecting(false);
-    }
+  const handleConnect = useCallback(() => {
+    setIsLoginModalOpen(true);
   }, []);
 
   const handleDisconnect = useCallback(() => {
-    setWalletAddress(null);
-  }, []);
+    logout();
+  }, [logout]);
 
   return (
     <div className="relative flex flex-col min-h-screen bg-[#050510] overflow-hidden">
@@ -60,7 +37,7 @@ export default function Home() {
         walletAddress={walletAddress}
         onConnect={handleConnect}
         onDisconnect={handleDisconnect}
-        isConnecting={isConnecting}
+        isConnecting={false}
       />
 
       {/* Main content */}
@@ -107,7 +84,12 @@ export default function Home() {
         <SocialMediaUI
           walletAddress={walletAddress}
           onConnect={handleConnect}
-          isConnecting={isConnecting}
+          isConnecting={false}
+        />
+
+        <LoginModal 
+          isOpen={isLoginModalOpen} 
+          onClose={() => setIsLoginModalOpen(false)} 
         />
 
         {/* Footer */}

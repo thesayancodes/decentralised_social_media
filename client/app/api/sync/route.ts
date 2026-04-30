@@ -1,0 +1,107 @@
+import { NextResponse } from 'next/server';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+export async function POST(req: Request) {
+  try {
+    const data = await req.json();
+    const { action, payload } = data;
+
+    switch (action) {
+      case 'sync_profile':
+        await prisma.profile.upsert({
+          where: { address: payload.address },
+          update: {
+            username: payload.username,
+            avatarUrl: payload.avatarUrl,
+            bio: payload.bio,
+          },
+          create: {
+            address: payload.address,
+            username: payload.username,
+            avatarUrl: payload.avatarUrl,
+            bio: payload.bio,
+          },
+        });
+        break;
+
+      case 'sync_post':
+        await prisma.post.upsert({
+          where: { id: payload.id },
+          update: {
+            likeCount: payload.likeCount,
+            commentCount: payload.commentCount,
+          },
+          create: {
+            id: payload.id,
+            author: payload.author,
+            content: payload.content,
+            topic: payload.topic || "general",
+            timestamp: payload.timestamp,
+            likeCount: payload.likeCount || 0,
+            commentCount: payload.commentCount || 0,
+            ipfsHash: payload.ipfsHash, // Support for heavy content
+          },
+        });
+        
+        // Reward mechanism: update streak and balance (simulation of smart contract state)
+        // In a real app, you would fetch the balance/streak directly from the contract or indexer
+        await prisma.profile.updateMany({
+          where: { address: payload.author },
+          data: { balance: { increment: 10 } }, // +10 for posting
+        });
+        break;
+
+      case 'sync_like':
+        await prisma.like.create({
+          data: {
+            postId: payload.postId,
+            liker: payload.liker,
+          },
+        });
+        await prisma.post.update({
+          where: { id: payload.postId },
+          data: { likeCount: { increment: 1 } },
+        });
+        break;
+
+      default:
+        return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Sync Error:', error);
+    return NextResponse.json({ error: 'Failed to sync' }, { status: 500 });
+  }
+}
+
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const type = searchParams.get('type');
+
+  try {
+    if (type === 'feed') {
+      const posts = await prisma.post.findMany({
+        orderBy: { timestamp: 'desc' },
+        take: 50,
+      });
+      return NextResponse.json(posts);
+    }
+
+    if (type === 'profile') {
+      const address = searchParams.get('address');
+      if (!address) return NextResponse.json({ error: 'Missing address' }, { status: 400 });
+      
+      const profile = await prisma.profile.findUnique({
+        where: { address },
+      });
+      return NextResponse.json(profile || { balance: 0, streak: 0 });
+    }
+
+    return NextResponse.json({ error: 'Unknown type' }, { status: 400 });
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to fetch' }, { status: 500 });
+  }
+}
