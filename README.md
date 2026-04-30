@@ -262,7 +262,8 @@ CAZMG5F2YMU5SACPY325V35GSF7BSPWMDHAY7SV44LI7IXT2P3P7QNBA
 <img width="1896" height="900" alt="image" src="https://github.com/user-attachments/assets/71cb9420-a39a-467c-aa7c-dc3fa991bebc" />
 
 ### 📸 UI Screenshot:
-<img width="1919" height="911" alt="image" src="https://github.com/user-attachments/assets/020dcafe-fbbd-482b-beb9-58a31f831aa8" />
+<img width="1919" height="914" alt="image" src="https://github.com/user-attachments/assets/9e0a7a4f-af1c-4f0f-b868-69cf9a785ff0" />
+
 
 
 
