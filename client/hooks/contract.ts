@@ -10,6 +10,7 @@ import {
   nativeToScVal,
   scValToNative,
   rpc,
+  Account,
 } from "@stellar/stellar-sdk";
 import {
   isConnected,
@@ -26,7 +27,7 @@ import {
 
 /** Your deployed Soroban contract ID */
 export const CONTRACT_ADDRESS =
-  "CAZMG5F2YMU5SACPY325V35GSF7BSPWMDHAY7SV44LI7IXT2P3P7QNBA";
+  "CAMGKSC52O33WPITPYHIMD5V5IUL5AVXGRSKNMYWHHYFTZNRUJHZZZ36";
 
 /** Network passphrase (testnet by default) */
 export const NETWORK_PASSPHRASE = Networks.TESTNET;
@@ -100,7 +101,17 @@ export async function callContract(
   sign: boolean = true
 ) {
   const contract = new Contract(CONTRACT_ADDRESS);
-  const account = await server.getAccount(caller);
+  let account;
+  try {
+    account = await server.getAccount(caller);
+  } catch (err) {
+    if (!sign) {
+      // For read-only operations, we can mock the account if it's unfunded
+      account = new Account(caller, "0");
+    } else {
+      throw err;
+    }
+  }
 
   const tx = new TransactionBuilder(account, {
     fee: "100",
@@ -267,7 +278,19 @@ export async function createPost(caller: string, content: string, topic: string 
 
   // Sync to Hybrid DB
   try {
-    const newId = Math.floor(Math.random() * 1000000); // In real app, get from 'res'
+    let newId = Math.floor(Math.random() * 1000000); // Fallback
+    try {
+      // In Soroban, getting the return value of a successful transaction can be complex,
+      // so we fetch the latest post count which is guaranteed to be our new post ID
+      // since we just successfully created it.
+      const postCount = await readContract("get_post_count", [], caller);
+      if (postCount !== null && postCount !== undefined) {
+        newId = Number(postCount);
+      }
+    } catch(err) {
+      console.warn("Could not fetch exact post count, using fallback id", err);
+    }
+    
     await fetch('/api/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -377,12 +400,28 @@ export async function likePost(postId: number, liker: string) {
 }
 
 export async function unlikePost(postId: number, liker: string) {
-  return callContract(
+  const res = await callContract(
     "unlike_post",
     [toScValU64(BigInt(postId)), toScValAddress(liker)],
     liker,
     true
   );
+
+  // Sync to Hybrid DB
+  try {
+    await fetch('/api/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'sync_unlike',
+        payload: { postId, liker }
+      })
+    });
+  } catch (e) {
+    console.error("Hybrid sync failed", e);
+  }
+
+  return res;
 }
 
 export async function getLikeCount(postId: number, caller?: string) {

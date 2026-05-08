@@ -54,16 +54,29 @@ export async function POST(req: Request) {
         break;
 
       case 'sync_like':
-        await prisma.like.create({
-          data: {
-            postId: payload.postId,
-            liker: payload.liker,
-          },
+        await prisma.like.upsert({
+          where: { postId_liker: { postId: payload.postId, liker: payload.liker } },
+          update: {},
+          create: { postId: payload.postId, liker: payload.liker },
         });
         await prisma.post.update({
           where: { id: payload.postId },
           data: { likeCount: { increment: 1 } },
         });
+        break;
+
+      case 'sync_unlike':
+        try {
+          await prisma.like.delete({
+            where: { postId_liker: { postId: payload.postId, liker: payload.liker } },
+          });
+          await prisma.post.update({
+            where: { id: payload.postId },
+            data: { likeCount: { decrement: 1 } },
+          });
+        } catch (e) {
+          // ignore if already deleted
+        }
         break;
 
       default:

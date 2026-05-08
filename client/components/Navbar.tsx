@@ -101,12 +101,31 @@ export default function Navbar({
             </svg>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-base font-semibold tracking-tight text-white">
-              SociaLink
+            <span className="text-base font-semibold tracking-tight text-white flex">
+              {"SocialMedia".split("").map((char, i) => (
+                <span
+                  key={i}
+                  className="animate-wave"
+                  style={{ animationDelay: `${i * 0.1}s` }}
+                >
+                  {char}
+                </span>
+              ))}
             </span>
             <span className="hidden sm:inline-block text-[10px] font-mono text-white/20 border border-white/[0.06] rounded px-1.5 py-0.5">
               Soroban
             </span>
+            
+            {/* Wavy Animated Live UI */}
+            <div className="hidden sm:flex items-center gap-1.5 bg-[#f87171]/10 text-[#f87171] px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-widest border border-[#f87171]/20">
+              <div className="flex items-end gap-[2px] h-2.5">
+                <span className="w-[2px] bg-[#f87171] rounded-sm animate-wave-bar" style={{ animationDelay: '0s' }}></span>
+                <span className="w-[2px] bg-[#f87171] rounded-sm animate-wave-bar" style={{ animationDelay: '0.2s' }}></span>
+                <span className="w-[2px] bg-[#f87171] rounded-sm animate-wave-bar" style={{ animationDelay: '0.4s' }}></span>
+                <span className="w-[2px] bg-[#f87171] rounded-sm animate-wave-bar" style={{ animationDelay: '0.1s' }}></span>
+              </div>
+              LIVE
+            </div>
           </div>
         </div>
 
@@ -176,7 +195,7 @@ export default function Navbar({
             <button
               onClick={onConnect}
               disabled={isConnecting}
-              className="relative overflow-hidden rounded-xl bg-gradient-to-r from-[#7c6cf0] to-[#5b8cf0] p-[1px] transition-all hover:shadow-[0_0_25px_rgba(124,108,240,0.25)] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="relative overflow-hidden rounded-xl bg-gradient-to-r from-[#7c6cf0] to-[#5b8cf0] p-[1px] transition-all duration-300 hover:shadow-[0_0_30px_rgba(124,108,240,0.5)] hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none"
             >
               <div className="flex items-center gap-2 rounded-[11px] bg-[#0c0c1d]/90 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm">
                 {isConnecting ? (

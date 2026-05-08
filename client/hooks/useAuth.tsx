@@ -57,6 +57,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem("desocial_secret", kp.secret());
       setKeypair(kp);
       setAddress(kp.publicKey());
+      
+      // Automatically fund the new testnet account using Friendbot
+      fetch(`https://friendbot.stellar.org/?addr=${kp.publicKey()}`)
+        .then(() => console.log("Guest account funded on Testnet!"))
+        .catch((e) => console.error("Failed to fund guest account:", e));
     }
   };
 

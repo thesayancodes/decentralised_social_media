@@ -42,7 +42,7 @@ export function LoginModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =
               <polyline points="22,6 12,13 2,6" />
             </svg>
           </div>
-          <h2 className="text-2xl font-bold text-white mb-2">Welcome to SociaLink</h2>
+          <h2 className="text-2xl font-bold text-white mb-2">Welcome to SocialMedia</h2>
           <p className="text-sm text-white/50">Enter your email to sign in or create an account instantly.</p>
         </div>
 

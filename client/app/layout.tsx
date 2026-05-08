@@ -13,14 +13,19 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SociaLink — Decentralized Social on Stellar",
+  title: "SocialMedia — Decentralized Social on Stellar",
   description:
-    "Permissionless social media dapp on Stellar Soroban. Post, like, comment, and follow — all on-chain.",
+    "A permissionless, gasless, completely decentralized social media platform built on Soroban and Stellar.",
+  openGraph: {
+    title: "SocialMedia",
+    description:
+      "A permissionless, gasless, completely decentralized social media platform built on Soroban and Stellar.",
+  },
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "SociaLink",
+    title: "SocialMedia",
   },
   formatDetection: {
     telephone: false,
@@ -36,6 +41,7 @@ export const viewport = {
 };
 
 import { Providers } from "@/components/Providers";
+import { CustomCursor } from "@/components/CustomCursor";
 
 export default function RootLayout({
   children,

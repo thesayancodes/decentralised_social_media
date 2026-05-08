@@ -15,6 +15,6 @@ export async function POST() {
 
   return NextResponse.json({ 
     success: true, 
-    message: "Transaction sponsored successfully by SociaLink Backend" 
+    message: "Transaction sponsored successfully by SocialMedia Backend" 
   });
 }

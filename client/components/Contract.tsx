@@ -29,6 +29,7 @@ import { Spotlight } from "@/components/ui/spotlight";
 import { ShimmerButton } from "@/components/ui/shimmer-button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { TiltCard } from "./TiltCard";
 
 // ─── Icons ────────────────────────────────────────────────────
 
@@ -520,7 +521,7 @@ function CreatePostBox({
                   onClick={handleSubmit}
                   disabled={isPosting || !content.trim()}
                   shimmerColor="#7c6cf0"
-                  className="px-4 py-2 text-xs"
+                  className="px-4 py-2 text-xs transition-all duration-300 hover:scale-105 active:scale-95 hover:shadow-[0_0_20px_rgba(124,108,240,0.4)] disabled:hover:scale-100 disabled:hover:shadow-none"
                 >
                   {isPosting ? <><SpinnerIcon /> Posting...</> : <><FeatherIcon /> Post</>}
                 </ShimmerButton>
@@ -531,7 +532,7 @@ function CreatePostBox({
       ) : (
         <button
           onClick={onConnect}
-          className="w-full rounded-xl border border-dashed border-[#7c6cf0]/20 bg-[#7c6cf0]/[0.03] py-5 text-sm text-[#7c6cf0]/50 hover:border-[#7c6cf0]/30 hover:text-[#7c6cf0]/80 transition-all"
+          className="w-full rounded-xl border border-dashed border-[#7c6cf0]/20 bg-[#7c6cf0]/[0.03] py-5 text-sm text-[#7c6cf0]/50 transition-all duration-300 hover:border-[#7c6cf0]/50 hover:text-[#7c6cf0]/90 hover:bg-[#7c6cf0]/10 hover:shadow-[0_0_30px_rgba(124,108,240,0.15)] active:scale-[0.98]"
         >
           Connect wallet to post
         </button>
@@ -564,6 +565,7 @@ export default function SocialMediaUI({ walletAddress, onConnect, isConnecting }
   const [newPostTopic, setNewPostTopic] = useState("general");
   const [newPostIpfsHash, setNewPostIpfsHash] = useState<string | null>(null);
   const [expandedComments, setExpandedComments] = useState<number | null>(null);
+  const [likingPosts, setLikingPosts] = useState<Set<number>>(new Set());
 
   const [userFollowerCount, setUserFollowerCount] = useState(0);
   const [userFollowingCount, setUserFollowingCount] = useState(0);
@@ -577,12 +579,13 @@ export default function SocialMediaUI({ walletAddress, onConnect, isConnecting }
   const [editAvatarUrl, setEditAvatarUrl] = useState("");
   const [editBio, setEditBio] = useState("");
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const lastLikeAction = useRef<{ [postId: number]: number }>({});
 
   const [refreshKey, setRefreshKey] = useState(0);
 
   // Load posts
   const loadPosts = useCallback(async () => {
-    setIsLoadingPosts(true);
+    if (posts.length === 0) setIsLoadingPosts(true);
     try {
       const result = await getRecentPosts(0, 30);
       const postArray: PostData[] = Array.isArray(result) ? result.map((p: unknown) => {
@@ -611,7 +614,18 @@ export default function SocialMediaUI({ walletAddress, onConnect, isConnecting }
             if (isFollowingResult) followingPostAuthors.add(p.id);
           } catch { /* skip */ }
         }
-        setLikedPosts(liked);
+        setLikedPosts((prev) => {
+          const next = new Set(liked);
+          const now = Date.now();
+          Object.entries(lastLikeAction.current).forEach(([idStr, t]) => {
+             if (now - t < 15000) {
+                const id = Number(idStr);
+                if (prev.has(id)) next.add(id);
+                else next.delete(id);
+             }
+          });
+          return next;
+        });
         setFollowingPosts(followingPostAuthors);
       }
 
@@ -642,7 +656,7 @@ export default function SocialMediaUI({ walletAddress, onConnect, isConnecting }
     } finally {
       setIsLoadingPosts(false);
     }
-  }, [walletAddress, refreshKey]);
+  }, [walletAddress, refreshKey, posts.length]);
 
   // Load profile data
   const loadProfile = useCallback(async () => {
@@ -689,7 +703,7 @@ export default function SocialMediaUI({ walletAddress, onConnect, isConnecting }
   // Load feed
   const loadFeed = useCallback(async () => {
     if (!walletAddress) return;
-    setIsLoadingPosts(true);
+    if (posts.length === 0) setIsLoadingPosts(true);
     try {
       const result = await getFollowedFeed(walletAddress, 0, 30);
       const postArray: PostData[] = Array.isArray(result) ? result.map((p: unknown) => {
@@ -717,7 +731,18 @@ export default function SocialMediaUI({ walletAddress, onConnect, isConnecting }
             if (isFollowingResult) followingPostAuthors.add(p.id);
           } catch { /* skip */ }
         }
-        setLikedPosts(liked);
+        setLikedPosts((prev) => {
+          const next = new Set(liked);
+          const now = Date.now();
+          Object.entries(lastLikeAction.current).forEach(([idStr, t]) => {
+             if (now - t < 15000) {
+                const id = Number(idStr);
+                if (prev.has(id)) next.add(id);
+                else next.delete(id);
+             }
+          });
+          return next;
+        });
         setFollowingPosts(followingPostAuthors);
       }
 
@@ -747,7 +772,7 @@ export default function SocialMediaUI({ walletAddress, onConnect, isConnecting }
     } finally {
       setIsLoadingPosts(false);
     }
-  }, [walletAddress, refreshKey]);
+  }, [walletAddress, refreshKey, posts.length]);
 
   useEffect(() => {
     // Initial load
@@ -796,7 +821,10 @@ export default function SocialMediaUI({ walletAddress, onConnect, isConnecting }
 
   const handleLike = useCallback(async (postId: number) => {
     if (!walletAddress) return;
+    setError(null);
     const isLiked = likedPosts.has(postId);
+    
+    setLikingPosts((prev) => new Set(prev).add(postId));
     try {
       if (isLiked) {
         await unlikePost(postId, walletAddress);
@@ -809,9 +837,31 @@ export default function SocialMediaUI({ walletAddress, onConnect, isConnecting }
         await likePost(postId, walletAddress);
         setLikedPosts((prev) => new Set(prev).add(postId));
       }
+      lastLikeAction.current[postId] = Date.now();
       setRefreshKey((k) => k + 1);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Action failed");
+    } catch (err: any) {
+      const msg = err.message || String(err);
+      if (!isLiked && (msg.includes("already liked") || msg.includes("UnreachableCodeReached") || msg.includes("InvalidAction"))) {
+        // State was stale, it's already liked on the blockchain
+        setLikedPosts((prev) => new Set(prev).add(postId));
+        lastLikeAction.current[postId] = Date.now();
+      } else if (isLiked && (msg.includes("has not liked") || msg.includes("UnreachableCodeReached") || msg.includes("InvalidAction"))) {
+        // State was stale, it's already unliked
+        setLikedPosts((prev) => {
+          const next = new Set(prev);
+          next.delete(postId);
+          return next;
+        });
+        lastLikeAction.current[postId] = Date.now();
+      } else {
+        setError(err instanceof Error ? err.message : "Action failed");
+      }
+    } finally {
+      setLikingPosts((prev) => {
+        const next = new Set(prev);
+        next.delete(postId);
+        return next;
+      });
     }
   }, [walletAddress, likedPosts]);
 
@@ -873,7 +923,7 @@ export default function SocialMediaUI({ walletAddress, onConnect, isConnecting }
                 <FeatherIcon />
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-white/90">SociaLink</h3>
+                <h3 className="text-sm font-semibold text-white/90">SocialMedia</h3>
                 <p className="text-[10px] text-white/25 font-mono mt-0.5">{truncate(CONTRACT_ADDRESS)}</p>
               </div>
             </div>
@@ -932,18 +982,20 @@ export default function SocialMediaUI({ walletAddress, onConnect, isConnecting }
                 ) : (
                   posts.map((post, index) => (
                     <div key={post.id} className="animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
-                      <PostCard
-                        post={post}
-                        walletAddress={walletAddress}
-                        liked={likedPosts.has(post.id)}
-                        following={followingPosts.has(post.id)}
-                        isLiking={false}
-                        isFollowingUser={followingUsers.has(post.author)}
-                        onLike={() => handleLike(post.id)}
-                        onComment={() => toggleComments(post.id)}
-                        onFollow={() => handleFollow(post.author)}
-                        onUnfollow={() => handleUnfollow(post.author)}
-                      />
+                      <TiltCard>
+                        <PostCard
+                          post={post}
+                          walletAddress={walletAddress}
+                          liked={likedPosts.has(post.id)}
+                          following={followingPosts.has(post.id)}
+                          isLiking={likingPosts.has(post.id)}
+                          isFollowingUser={followingUsers.has(post.author)}
+                          onLike={() => handleLike(post.id)}
+                          onComment={() => toggleComments(post.id)}
+                          onFollow={() => handleFollow(post.author)}
+                          onUnfollow={() => handleUnfollow(post.author)}
+                        />
+                      </TiltCard>
                       {expandedComments === post.id && (
                         <CommentSection
                           postId={post.id}
@@ -1005,18 +1057,20 @@ export default function SocialMediaUI({ walletAddress, onConnect, isConnecting }
                     .filter(post => newPostTopic === "general" || newPostTopic === "all" || post.topic === newPostTopic)
                     .map((post, index) => (
                     <div key={post.id} className="animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
-                      <PostCard
-                        post={post}
-                        walletAddress={walletAddress}
-                        liked={likedPosts.has(post.id)}
-                        following={followingPosts.has(post.id)}
-                        isLiking={false}
-                        isFollowingUser={followingUsers.has(post.author)}
-                        onLike={() => handleLike(post.id)}
-                        onComment={() => toggleComments(post.id)}
-                        onFollow={() => handleFollow(post.author)}
-                        onUnfollow={() => handleUnfollow(post.author)}
-                      />
+                      <TiltCard>
+                        <PostCard
+                          post={post}
+                          walletAddress={walletAddress}
+                          liked={likedPosts.has(post.id)}
+                          following={followingPosts.has(post.id)}
+                          isLiking={likingPosts.has(post.id)}
+                          isFollowingUser={followingUsers.has(post.author)}
+                          onLike={() => handleLike(post.id)}
+                          onComment={() => toggleComments(post.id)}
+                          onFollow={() => handleFollow(post.author)}
+                          onUnfollow={() => handleUnfollow(post.author)}
+                        />
+                      </TiltCard>
                       {expandedComments === post.id && (
                         <CommentSection
                           postId={post.id}
@@ -1197,7 +1251,7 @@ export default function SocialMediaUI({ walletAddress, onConnect, isConnecting }
                     <p className="text-sm text-white/25 mb-3">Connect your wallet to view profile</p>
                     <button
                       onClick={onConnect}
-                      className="rounded-xl border border-dashed border-[#fbbf24]/20 bg-[#fbbf24]/[0.03] px-6 py-3 text-sm text-[#fbbf24]/60 hover:border-[#fbbf24]/30 hover:text-[#fbbf24]/80 transition-all"
+                      className="rounded-xl border border-dashed border-[#fbbf24]/20 bg-[#fbbf24]/[0.03] px-6 py-3 text-sm text-[#fbbf24]/60 transition-all duration-300 hover:border-[#fbbf24]/50 hover:text-[#fbbf24]/90 hover:bg-[#fbbf24]/10 hover:shadow-[0_0_30px_rgba(251,191,36,0.15)] active:scale-[0.98]"
                     >
                       Connect Wallet
                     </button>
@@ -1209,7 +1263,7 @@ export default function SocialMediaUI({ walletAddress, onConnect, isConnecting }
 
           {/* Footer */}
           <div className="border-t border-white/[0.04] px-6 py-3 flex items-center justify-between">
-            <p className="text-[10px] text-white/15">SociaLink &middot; Permissionless on Stellar</p>
+            <p className="text-[10px] text-white/15">SocialMedia &middot; Permissionless on Stellar</p>
             <div className="flex items-center gap-2">
               {["Posts", "Like", "Follow", "Comment"].map((s, i) => (
                 <span key={s} className="flex items-center gap-1.5">

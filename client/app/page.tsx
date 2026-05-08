@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { Meteors } from "@/components/ui/meteors";
 import Navbar from "@/components/Navbar";
+import { FluidBackground } from "@/components/FluidBackground";
 import SocialMediaUI from "@/components/Contract";
 import { useAuth } from "@/hooks/useAuth";
 import { LoginModal } from "@/components/LoginModal";
@@ -26,11 +27,8 @@ export default function Home() {
         <Meteors number={12} />
       </div>
 
-      {/* Ambient orbs */}
-      <div className="pointer-events-none fixed inset-0 z-0">
-        <div className="absolute top-[-20%] left-[-10%] h-[600px] w-[600px] rounded-full bg-[#7c6cf0]/20 blur-[120px] animate-float" />
-        <div className="absolute bottom-[-10%] right-[-5%] h-[500px] w-[500px] rounded-full bg-[#4fc3f7]/15 blur-[120px] animate-float-delayed" />
-      </div>
+      {/* Fluid Interactive Background */}
+      <FluidBackground />
 
       {/* Navbar */}
       <Navbar
