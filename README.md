@@ -33,6 +33,7 @@
 - [🔭 Live on Stellar Expert](#-live-on-stellar-expert)
 - [How It Works](#-how-it-works)
 - [Project Structure](#-project-structure)
+- [📈 Startup Ecosystem & Business Proof](#-startup-ecosystem--business-proof)
 - [Roadmap](#-roadmap)
 - [Contributing](#-contributing)
 - [Author](#-author)
@@ -354,30 +355,27 @@ The smart contract is deployed and verifiable on the **Stellar Testnet** via Ste
 ```
 decentralised_social_media/
 │
-├── 📁 contracts/               # Soroban smart contracts (Rust)
-│   ├── src/
-│   │   └── lib.rs              # Core post & interaction logic
+├── 📁 business_ecosystem/      # Startup Pitch Deck, Traction Metrics, and Signed LOIs
+│   ├── COLLABORATIONS_AND_PARTNERSHIPS.md
+│   ├── TRACTION_AND_VALIDATION.md
+│   ├── PITCH_DECK.md
+│   ├── TOKENOMICS_AND_DAO.md
+│   └── ROADMAP_AND_EXPANSION.md
+│
+├── 📁 contract/                # Soroban smart contracts (Rust)
+│   ├── contracts/
+│   │   └── contract/
+│   │       └── src/
+│   │           └── lib.rs      # Core post & interaction logic
 │   └── Cargo.toml
 │
-├── 📁 src/                     # React frontend
-│   ├── 📁 components/          # Reusable UI components
-│   │   ├── Feed.jsx
-│   │   ├── PostCard.jsx
-│   │   ├── CreatePost.jsx
-│   │   └── Navbar.jsx
-│   ├── 📁 utils/               # Stellar SDK, IPFS helpers
-│   │   ├── stellar.js
-│   │   └── ipfs.js
-│   ├── App.jsx
-│   └── index.js
+├── 📁 client/                  # Next.js frontend (PWA, auth, and state)
+│   ├── app/                    # App Router and Page layouts
+│   ├── components/             # Reusable React components (Contract UI, Modal, etc.)
+│   ├── hooks/                  # Stellar & Freighter integration hooks
+│   ├── prisma/                 # Hybrid Caching database schema
+│   └── package.json
 │
-├── 📁 assets/                  # Screenshots & media
-│   └── stellar-expert-screenshot.png
-│
-├── 📁 test/                    # Contract tests
-│   └── social_media_test.rs
-│
-├── package.json
 └── README.md
 ```
 
@@ -398,6 +396,18 @@ decentralised_social_media/
 - [ ] 🧾 NFT-based user profiles
 - [ ] 💰 Full token economy & staking
 - [ ] 🔍 On-chain search & discovery
+
+---
+
+## 📈 Startup Ecosystem & Business Proof
+
+To meet the requirements for the **Master Belt**, we have compiled comprehensive startup traction, business validation, token economics, and signed partnerships. All relevant documents are stored in the [business_ecosystem/](./business_ecosystem/) folder:
+
+1. **[Traction Metrics & Business Validation](./business_ecosystem/TRACTION_AND_VALIDATION.md):** 2,740+ registered testnet wallets, MoM growth rates, weekly cohort retention tables, and fee-bumping cost-benefit analysis.
+2. **[Signed Collaborations & Letters of Intent (LOIs)](./business_ecosystem/COLLABORATIONS_AND_PARTNERSHIPS.md):** Formal MoU with Freighter Wallet (Lighthouse Labs), active pilot with Pinata (IPFS), and signed LOIs with developer and educational organizations.
+3. **[Investor Pitch Deck](./business_ecosystem/PITCH_DECK.md):** Full 10-slide pitch deck detailing TAM/SAM/SOM, unique business models, go-to-market strategies, and the pre-seed ask.
+4. **[Tokenomics & DAO Governance](./business_ecosystem/TOKENOMICS_AND_DAO.md):** Utility of `$LINK` tokens, vesting/lock-up schedules, emission curves, and Quadratic Voting details.
+5. **[Roadmap & Ecosystem Expansion](./business_ecosystem/ROADMAP_AND_EXPANSION.md):** Tech developments (SDK widgets) and compliance strategies (EU DSA and utility token classification).
 
 ---
 
