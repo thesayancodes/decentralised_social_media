@@ -134,9 +134,44 @@ body {
   animation: pulse-ring 2s ease-out infinite;
 }
 
+/* ── Glow & Particle keyframes ── */
+
+@keyframes particle-pop {
+  0% { transform: scale(0.3) translateY(0); opacity: 1; }
+  50% { transform: scale(1.2) translateY(-20px); opacity: 0.9; }
+  100% { transform: scale(0.8) translateY(-40px); opacity: 0; }
+}
+
+@keyframes tip-float {
+  0% { transform: translateY(0) rotate(0deg) scale(0.8); opacity: 0; }
+  20% { transform: translateY(-10px) rotate(-5deg) scale(1.1); opacity: 1; }
+  80% { transform: translateY(-45px) rotate(5deg) scale(1); opacity: 0.8; }
+  100% { transform: translateY(-65px) rotate(0deg) scale(0.6); opacity: 0; }
+}
+
+@keyframes border-glow {
+  0%, 100% { border-color: rgba(124, 108, 240, 0.25); box-shadow: 0 0 15px rgba(124, 108, 240, 0.15); }
+  50% { border-color: rgba(79, 195, 247, 0.4); box-shadow: 0 0 25px rgba(79, 195, 247, 0.25); }
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-particle-pop { animation: particle-pop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+.animate-tip-float { animation: tip-float 1.2s ease-out forwards; }
+.animate-border-glow { animation: border-glow 4s ease-in-out infinite; }
+.skeleton-shimmer {
+  background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.8s infinite;
+}
+
 /* ── Custom scrollbar ── */
 
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+

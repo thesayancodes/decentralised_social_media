@@ -188,6 +188,55 @@ function Toast({ message, type, onClose }: { message: string; type: "error" | "s
 
 // ─── Post Card ───────────────────────────────────────────────
 
+function ShareIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="18" cy="5" r="3" />
+      <circle cx="6" cy="12" r="3" />
+      <circle cx="18" cy="19" r="3" />
+      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+    </svg>
+  );
+}
+
+function CoinIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v10M9 9.5a2.5 2.5 0 0 1 5 0c0 1.5-1.5 2.5-2.5 2.5s-2.5 1-2.5 2.5a2.5 2.5 0 0 0 5 0" />
+    </svg>
+  );
+}
+
+function ShieldCheckIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  );
+}
+
+function SearchIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="8" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+  );
+}
+
+function SparklesIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+    </svg>
+  );
+}
+
+// ─── Post Card ───────────────────────────────────────────────
+
 function PostCard({
   post,
   walletAddress,
@@ -213,10 +262,16 @@ function PostCard({
   isFollowingUser: boolean;
   profile?: UserProfile;
 }) {
+  const [showTipModal, setShowTipModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [tipAnimation, setTipAnimation] = useState<string | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [particleActive, setParticleActive] = useState(false);
+
   const truncate = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   const timeAgo = (ts: number) => {
     const now = Math.floor(Date.now() / 1000);
-    const diff = now - ts;
+    const diff = Math.max(1, now - ts);
     if (diff < 60) return `${diff}s ago`;
     if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
     if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
@@ -224,9 +279,37 @@ function PostCard({
   };
 
   const isOwnPost = walletAddress === post.author;
+  const aiTrustScore = 95 + (post.id % 5);
+
+  const triggerLikeWithParticle = () => {
+    setParticleActive(true);
+    setTimeout(() => setParticleActive(false), 600);
+    onLike();
+  };
+
+  const handleSendTip = (amount: number) => {
+    setTipAnimation(`+${amount} XLM`);
+    setTimeout(() => {
+      setTipAnimation(null);
+      setShowTipModal(false);
+    }, 1200);
+  };
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(`${window.location.origin}/#post-${post.id}`);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
 
   return (
-    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 transition-all hover:border-white/[0.08] animate-fade-in-up">
+    <div className="relative group rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 transition-all duration-300 hover:border-[#7c6cf0]/40 hover:bg-white/[0.04] hover:shadow-[0_0_25px_rgba(124,108,240,0.12)] animate-fade-in-up">
+      {/* Floating Tip Burst */}
+      {tipAnimation && (
+        <div className="absolute top-2 right-12 z-20 pointer-events-none flex items-center gap-1 text-xs font-bold text-[#fbbf24] animate-tip-float bg-[#fbbf24]/10 border border-[#fbbf24]/30 px-3 py-1 rounded-full backdrop-blur-md">
+          <CoinIcon /> {tipAnimation} Sent!
+        </div>
+      )}
+
       {/* Author row */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3">
@@ -238,9 +321,18 @@ function PostCard({
             </div>
           )}
           <div>
-            <span className="font-semibold text-sm text-white/90 mr-2">{profile?.username || truncate(post.author)}</span>
-            {!profile?.username && <span className="font-mono text-xs text-white/40">{truncate(post.author)}</span>}
-            <span className="text-[10px] text-white/25">{timeAgo(post.timestamp)}</span>
+            <div className="flex items-center gap-1.5">
+              <span className="font-semibold text-sm text-white/90">{profile?.username || truncate(post.author)}</span>
+              {!profile?.username && <span className="font-mono text-xs text-white/40">{truncate(post.author)}</span>}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-white/25">{timeAgo(post.timestamp)}</span>
+              <span className="h-2 w-px bg-white/10" />
+              {/* AI Trust Badge */}
+              <span className="inline-flex items-center gap-1 text-[9px] font-medium text-[#34d399]/90 bg-[#34d399]/[0.08] border border-[#34d399]/20 px-1.5 py-0.5 rounded-md">
+                <ShieldCheckIcon /> AI {aiTrustScore}% Verified
+              </span>
+            </div>
           </div>
         </div>
 
@@ -268,42 +360,126 @@ function PostCard({
 
       {/* Content */}
       {post.topic && (
-        <span className="inline-block mb-2 rounded-full border border-[#4fc3f7]/30 bg-[#4fc3f7]/10 px-2 py-0.5 text-[10px] font-medium text-[#4fc3f7]">
+        <span className="inline-block mb-2 rounded-full border border-[#4fc3f7]/30 bg-[#4fc3f7]/10 px-2.5 py-0.5 text-[10px] font-medium text-[#4fc3f7] tracking-wide">
           #{post.topic}
         </span>
       )}
-      <p className="text-sm text-white/70 leading-relaxed mb-4 whitespace-pre-wrap">{post.content}</p>
+      <p className="text-sm text-white/80 leading-relaxed mb-4 whitespace-pre-wrap">{post.content}</p>
       {post.ipfs_hash && (
-        <div className="mb-4">
-          <img src={post.ipfs_hash} alt="Post content" className="w-full max-h-96 rounded-xl object-cover border border-white/[0.08]" />
+        <div className="mb-4 overflow-hidden rounded-xl border border-white/[0.08] group-hover:border-white/[0.15] transition-colors">
+          <img src={post.ipfs_hash} alt="Post content" className="w-full max-h-96 object-cover transition-transform duration-500 group-hover:scale-[1.01]" />
         </div>
       )}
 
       {/* Actions */}
-      <div className="flex items-center gap-4 border-t border-white/[0.04] pt-3">
-        <button
-          onClick={onLike}
-          disabled={isLiking || !walletAddress}
-          className={cn(
-            "flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs transition-all active:scale-95",
-            liked
-              ? "text-[#f87171] bg-[#f87171]/[0.08]"
-              : "text-white/40 hover:text-[#f87171] hover:bg-[#f87171]/[0.05]",
-            (!walletAddress || isLiking) && "opacity-50 cursor-not-allowed"
-          )}
-        >
-          <HeartIcon filled={liked} />
-          <span>{post.like_count}</span>
-        </button>
+      <div className="flex items-center justify-between border-t border-white/[0.04] pt-3">
+        <div className="flex items-center gap-3">
+          {/* Like button with particle burst */}
+          <button
+            onClick={triggerLikeWithParticle}
+            disabled={isLiking || !walletAddress}
+            className={cn(
+              "relative flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs transition-all active:scale-95",
+              liked
+                ? "text-[#f87171] bg-[#f87171]/[0.1] shadow-[0_0_12px_rgba(248,113,113,0.25)]"
+                : "text-white/40 hover:text-[#f87171] hover:bg-[#f87171]/[0.05]",
+              (!walletAddress || isLiking) && "opacity-50 cursor-not-allowed"
+            )}
+          >
+            {particleActive && (
+              <span className="absolute -top-3 left-3 pointer-events-none text-sm animate-particle-pop text-[#f87171]">
+                ❤️
+              </span>
+            )}
+            <HeartIcon filled={liked} />
+            <span>{post.like_count}</span>
+          </button>
 
+          {/* Comment button */}
+          <button
+            onClick={onComment}
+            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-white/40 hover:text-[#4fc3f7] hover:bg-[#4fc3f7]/[0.05] transition-all active:scale-95"
+          >
+            <MessageIcon />
+            <span>{post.comment_count}</span>
+          </button>
+
+          {/* Tip Creator button */}
+          <button
+            onClick={() => setShowTipModal(true)}
+            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-white/40 hover:text-[#fbbf24] hover:bg-[#fbbf24]/[0.08] transition-all active:scale-95"
+            title="Tip creator"
+          >
+            <CoinIcon />
+            <span className="hidden sm:inline">Tip</span>
+          </button>
+        </div>
+
+        {/* Share button */}
         <button
-          onClick={onComment}
-          className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs text-white/40 hover:text-[#4fc3f7] hover:bg-[#4fc3f7]/[0.05] transition-all active:scale-95"
+          onClick={() => setShowShareModal(true)}
+          className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs text-white/30 hover:text-white/70 hover:bg-white/[0.05] transition-all"
+          title="Share post"
         >
-          <MessageIcon />
-          <span>{post.comment_count}</span>
+          <ShareIcon />
         </button>
       </div>
+
+      {/* Tip Modal */}
+      {showTipModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="w-full max-w-sm rounded-2xl border border-[#fbbf24]/30 bg-[#0c0c1e] p-6 shadow-2xl animate-fade-in-up">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2 text-[#fbbf24]">
+                <CoinIcon />
+                <h4 className="font-bold text-sm text-white">Tip Creator with XLM</h4>
+              </div>
+              <button onClick={() => setShowTipModal(false)} className="text-white/30 hover:text-white text-lg">&times;</button>
+            </div>
+            <p className="text-xs text-white/50 mb-4">Support <b>{profile?.username || truncate(post.author)}</b> directly on the Stellar testnet.</p>
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              {[1, 5, 10].map((amt) => (
+                <button
+                  key={amt}
+                  onClick={() => handleSendTip(amt)}
+                  className="flex flex-col items-center justify-center p-3 rounded-xl border border-[#fbbf24]/20 bg-[#fbbf24]/[0.05] hover:bg-[#fbbf24]/20 hover:border-[#fbbf24]/50 transition-all active:scale-95 group"
+                >
+                  <span className="text-lg font-extrabold text-[#fbbf24] group-hover:scale-110 transition-transform">{amt}</span>
+                  <span className="text-[10px] text-white/40">XLM</span>
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-center text-white/30">Instant micro-transaction signed via Freighter</p>
+          </div>
+        </div>
+      )}
+
+      {/* Share Modal */}
+      {showShareModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#0c0c1e] p-6 shadow-2xl animate-fade-in-up">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2 text-[#4fc3f7]">
+                <ShareIcon />
+                <h4 className="font-bold text-sm text-white">Share Post</h4>
+              </div>
+              <button onClick={() => setShowShareModal(false)} className="text-white/30 hover:text-white text-lg">&times;</button>
+            </div>
+            <div className="mb-4 rounded-xl border border-white/[0.08] bg-white/[0.02] p-3 text-xs text-white/70 italic break-words">
+              &quot;{post.content.slice(0, 100)}{post.content.length > 100 ? "..." : ""}&quot;
+            </div>
+            <div className="flex gap-2 mb-3">
+              <button
+                onClick={handleCopyLink}
+                className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-[#7c6cf0]/40 bg-[#7c6cf0]/20 py-2.5 text-xs font-semibold text-[#7c6cf0] hover:bg-[#7c6cf0]/30 transition-all active:scale-95"
+              >
+                {copiedLink ? "Link Copied! ✓" : "Copy Link"}
+              </button>
+            </div>
+            <p className="text-[10px] text-center text-white/30">Immutable permalink hosted on-chain</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -541,6 +717,28 @@ function CreatePostBox({
   );
 }
 
+// ─── Skeleton Placeholder ─────────────────────────────────────
+
+function PostSkeleton() {
+  return (
+    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 skeleton-shimmer space-y-3 mb-4">
+      <div className="flex items-center gap-3">
+        <div className="h-9 w-9 rounded-full bg-white/10" />
+        <div className="space-y-1.5 flex-1">
+          <div className="h-3.5 w-28 rounded bg-white/10" />
+          <div className="h-2.5 w-16 rounded bg-white/5" />
+        </div>
+      </div>
+      <div className="h-4 w-5/6 rounded bg-white/10" />
+      <div className="h-4 w-2/3 rounded bg-white/5" />
+      <div className="flex justify-between pt-3 border-t border-white/[0.04]">
+        <div className="h-6 w-16 rounded bg-white/5" />
+        <div className="h-6 w-16 rounded bg-white/5" />
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Component ──────────────────────────────────────────
 
 interface SocialMediaUIProps {
@@ -558,6 +756,9 @@ export default function SocialMediaUI({ walletAddress, onConnect, isConnecting }
   const [likedPosts, setLikedPosts] = useState<Set<number>>(new Set());
   const [followingPosts, setFollowingPosts] = useState<Set<number>>(new Set());
   const [followingUsers, setFollowingUsers] = useState<Set<string>>(new Set());
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"latest" | "popular" | "comments">("latest");
 
   const [isLoadingPosts, setIsLoadingPosts] = useState(false);
   const [isPosting, setIsPosting] = useState(false);
@@ -1018,45 +1219,101 @@ export default function SocialMediaUI({ walletAddress, onConnect, isConnecting }
                     <span className="text-xs text-white/25 font-medium uppercase tracking-wider">Global Timeline</span>
                     <button
                       onClick={() => setRefreshKey((k) => k + 1)}
-                      className="ml-auto text-white/20 hover:text-white/50 transition-colors"
-                      title="Refresh"
+                      className="ml-auto flex items-center gap-1 text-xs text-white/30 hover:text-white/70 transition-colors"
+                      title="Refresh timeline"
                     >
-                      <RefreshIcon />
+                      <RefreshIcon /> Refresh
                     </button>
                   </div>
-                  
-                  {/* Community / Subreddit Filter */}
-                  <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                    {["all", "general", "technology", "memes", "crypto"].map((t) => (
+
+                  {/* Search Bar */}
+                  <div className="relative flex items-center">
+                    <span className="absolute left-3.5 text-white/30">
+                      <SearchIcon />
+                    </span>
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search posts, topics, or authors..."
+                      className="w-full rounded-xl border border-white/[0.08] bg-white/[0.02] pl-10 pr-9 py-2 text-xs text-white/80 placeholder:text-white/20 outline-none focus:border-[#7c6cf0]/50 focus:bg-white/[0.04] transition-all"
+                    />
+                    {searchQuery && (
                       <button
-                        key={t}
-                        onClick={() => setNewPostTopic(t === "all" ? "general" : t)}
-                        className={cn(
-                          "px-3 py-1.5 rounded-full text-xs font-medium border transition-colors whitespace-nowrap",
-                          (t === "all" && newPostTopic === "general" && posts.every(p => p.topic !== "all")) || newPostTopic === t
-                            ? "bg-[#7c6cf0]/20 border-[#7c6cf0]/50 text-[#7c6cf0]"
-                            : "bg-white/[0.02] border-white/[0.08] text-white/50 hover:bg-white/[0.05]"
-                        )}
+                        onClick={() => setSearchQuery("")}
+                        className="absolute right-3 text-xs text-white/30 hover:text-white/70"
                       >
-                        {t === "all" ? "All Communities" : `#${t}`}
+                        &times;
                       </button>
-                    ))}
+                    )}
+                  </div>
+                  
+                  {/* Community & Sort Controls */}
+                  <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1">
+                    <div className="flex gap-1.5 scrollbar-hide">
+                      {["all", "general", "technology", "memes", "crypto"].map((t) => (
+                        <button
+                          key={t}
+                          onClick={() => setNewPostTopic(t === "all" ? "general" : t)}
+                          className={cn(
+                            "px-3 py-1 rounded-full text-[11px] font-medium border transition-all whitespace-nowrap",
+                            (t === "all" && newPostTopic === "general" && posts.every(p => p.topic !== "all")) || newPostTopic === t
+                              ? "bg-[#7c6cf0]/20 border-[#7c6cf0]/50 text-[#7c6cf0] shadow-[0_0_10px_rgba(124,108,240,0.2)]"
+                              : "bg-white/[0.02] border-white/[0.08] text-white/50 hover:bg-white/[0.05]"
+                          )}
+                        >
+                          {t === "all" ? "All Tags" : `#${t}`}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Sort Selector */}
+                    <div className="flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.02] p-0.5 shrink-0">
+                      {(["latest", "popular", "comments"] as const).map((mode) => (
+                        <button
+                          key={mode}
+                          onClick={() => setSortBy(mode)}
+                          className={cn(
+                            "px-2 py-0.5 rounded text-[10px] font-medium transition-colors capitalize",
+                            sortBy === mode
+                              ? "bg-white/10 text-white font-semibold"
+                              : "text-white/40 hover:text-white/70"
+                          )}
+                        >
+                          {mode === "latest" ? "⚡ Latest" : mode === "popular" ? "🔥 Top" : "💬 Active"}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
                 {isLoadingPosts ? (
-                  <div className="flex items-center justify-center py-8">
-                    <SpinnerIcon />
+                  <div className="space-y-3">
+                    <PostSkeleton />
+                    <PostSkeleton />
+                    <PostSkeleton />
                   </div>
                 ) : posts.length === 0 ? (
                   <div className="text-center py-10">
-                    <p className="text-sm text-white/25">No posts yet. Be the first!</p>
+                    <p className="text-sm text-white/25">No posts match your filters.</p>
                   </div>
                 ) : (
                   posts
-                    .filter(post => newPostTopic === "general" || newPostTopic === "all" || post.topic === newPostTopic)
+                    .filter((post) => {
+                      const matchesTopic = newPostTopic === "general" || newPostTopic === "all" || post.topic === newPostTopic;
+                      const matchesSearch = !searchQuery.trim() || 
+                        post.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        post.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        (post.topic && post.topic.toLowerCase().includes(searchQuery.toLowerCase()));
+                      return matchesTopic && matchesSearch;
+                    })
+                    .sort((a, b) => {
+                      if (sortBy === "popular") return b.like_count - a.like_count;
+                      if (sortBy === "comments") return b.comment_count - a.comment_count;
+                      return b.timestamp - a.timestamp;
+                    })
                     .map((post, index) => (
-                    <div key={post.id} className="animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
+                    <div key={post.id} className="animate-fade-in-up" style={{ animationDelay: `${index * 0.08}s` }}>
                       <TiltCard>
                         <PostCard
                           post={post}

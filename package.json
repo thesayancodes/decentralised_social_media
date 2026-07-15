@@ -1,0 +1,13 @@
+{
+  "name": "decentralised-social-media",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Root configuration to delegate npm commands to client",
+  "scripts": {
+    "postinstall": "npm install --prefix client",
+    "dev": "npm run dev --prefix client",
+    "build": "npm run build --prefix client",
+    "start": "npm run dev --prefix client",
+    "prod-start": "npm run start --prefix client"
+  }
+}

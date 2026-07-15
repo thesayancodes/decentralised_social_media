@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import withSerwistInit from "@serwist/next";
+import path from "path";
 
 const withSerwist = withSerwistInit({
   swSrc: "app/sw.ts",
@@ -8,7 +9,10 @@ const withSerwist = withSerwistInit({
 });
 
 const nextConfig: NextConfig = {
-  turbopack: {},
+  turbopack: {
+    root: path.resolve(__dirname),
+  },
 };
 
 export default withSerwist(nextConfig);
+
