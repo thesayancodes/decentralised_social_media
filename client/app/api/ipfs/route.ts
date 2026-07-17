@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import fs from 'fs';
+import path from 'path';
 
 export async function POST(req: Request) {
   try {
@@ -9,31 +11,40 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    // In a real app, you would upload to Pinata/IPFS here:
-    // const pinata = new PinataSDK(process.env.PINATA_API_KEY, process.env.PINATA_SECRET_KEY);
-    // const res = await pinata.pinFileToIPFS(fileStream);
-    // const ipfsHash = res.IpfsHash;
-
-    // We will simulate it by returning a random dummy image URL or a predefined hash
-    // Wait, since we are doing local dev without an API key, we will save it as base64 or 
-    // just return a nice dummy image from unsplash as the "IPFS" content to demonstrate the UI.
-    
-    // Convert the uploaded image to base64 to actually render what the user uploaded
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    const base64 = buffer.toString('base64');
-    const mimeType = file.type || 'image/png';
-    const fakeIpfsUri = `data:${mimeType};base64,${base64}`;
 
-    // Simulate network delay for IPFS pinning
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    let fileUrl: string;
+
+    try {
+      // Save locally to public/uploads when running on Node server
+      const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+
+      const ext = path.extname(file.name) || '.png';
+      const safeName = file.name.replace(/[^a-zA-Z0-9]/g, '_');
+      const filename = `${Date.now()}_${safeName}${ext}`;
+      const filePath = path.join(uploadsDir, filename);
+
+      await fs.promises.writeFile(filePath, buffer);
+      fileUrl = `/uploads/${filename}`;
+    } catch {
+      // Fallback for read-only serverless environments (e.g. Vercel)
+      const base64 = buffer.toString('base64');
+      const mimeType = file.type || 'image/png';
+      fileUrl = `data:${mimeType};base64,${base64}`;
+    }
 
     return NextResponse.json({ 
       success: true, 
-      ipfsHash: fakeIpfsUri // In real app, this is "Qm..."
+      ipfsHash: fileUrl
     });
   } catch (error) {
     console.error('IPFS Upload Error:', error);
-    return NextResponse.json({ error: 'Failed to upload to IPFS' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to upload image' }, { status: 500 });
   }
 }
+
+

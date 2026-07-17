@@ -2,12 +2,14 @@
 
 import { useState, useEffect, createContext, useContext } from "react";
 import { Keypair } from "@stellar/stellar-sdk";
+import { connectWallet, getWalletAddress } from "@/hooks/contract";
 
 interface AuthContextType {
   address: string | null;
   keypair: Keypair | null;
   isLoaded: boolean;
   login: (email: string) => void;
+  connectFreighterWallet: () => Promise<string>;
   logout: () => void;
 }
 
@@ -16,6 +18,7 @@ const AuthContext = createContext<AuthContextType>({
   keypair: null,
   isLoaded: false,
   login: () => {},
+  connectFreighterWallet: async () => "",
   logout: () => {},
 });
 
@@ -25,40 +28,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    // Load existing wallet from localStorage
     const savedSecret = localStorage.getItem("desocial_secret");
+    const savedFreighter = localStorage.getItem("freighter_address");
+
     if (savedSecret) {
       try {
         const kp = Keypair.fromSecret(savedSecret);
         setKeypair(kp);
         setAddress(kp.publicKey());
       } catch (e) {
-        console.error("Invalid secret in localStorage");
+        console.error("Invalid secret in localStorage", e);
         localStorage.removeItem("desocial_secret");
       }
+    } else if (savedFreighter) {
+      getWalletAddress().then((addr) => {
+        if (addr) {
+          setAddress(addr);
+        } else {
+          localStorage.removeItem("freighter_address");
+        }
+      });
     }
     setIsLoaded(true);
   }, []);
 
+  const connectFreighterWallet = async (): Promise<string> => {
+    const addr = await connectWallet();
+    localStorage.removeItem("desocial_secret");
+    localStorage.setItem("freighter_address", addr);
+    setKeypair(null);
+    setAddress(addr);
+    return addr;
+  };
+
   const login = (email: string) => {
-    // In a real app, this would derive a key from email/password or use Web3Auth.
-    // Here we generate a deterministic-ish keypair for the demo, or just a new random one
-    // if one doesn't exist, to simulate seamless onboarding.
     let kp = keypair;
     if (!kp) {
-      // Very naive pseudo-deterministic generation for demo purposes
-      // (Do not use in production!)
-      const hash = email.split("").reduce((a, b) => {
-        a = (a << 5) - a + b.charCodeAt(0);
-        return a & a;
-      }, 0);
-      
-      kp = Keypair.random(); // We'll just use random for safety
+      kp = Keypair.random();
+      localStorage.removeItem("freighter_address");
       localStorage.setItem("desocial_secret", kp.secret());
       setKeypair(kp);
       setAddress(kp.publicKey());
-      
-      // Automatically fund the new testnet account using Friendbot
+
       fetch(`https://friendbot.stellar.org/?addr=${kp.publicKey()}`)
         .then(() => console.log("Guest account funded on Testnet!"))
         .catch((e) => console.error("Failed to fund guest account:", e));
@@ -67,12 +78,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     localStorage.removeItem("desocial_secret");
+    localStorage.removeItem("freighter_address");
     setKeypair(null);
     setAddress(null);
   };
 
   return (
-    <AuthContext.Provider value={{ address, keypair, isLoaded, login, logout }}>
+    <AuthContext.Provider value={{ address, keypair, isLoaded, login, connectFreighterWallet, logout }}>
       {children}
     </AuthContext.Provider>
   );
@@ -81,3 +93,4 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   return useContext(AuthContext);
 }
+

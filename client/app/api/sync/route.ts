@@ -26,13 +26,15 @@ export async function POST(req: Request) {
         });
         break;
 
-      case 'sync_post':
+      case 'sync_post': {
+        const updateData: Record<string, unknown> = {};
+        if (payload.likeCount !== undefined) updateData.likeCount = payload.likeCount;
+        if (payload.commentCount !== undefined) updateData.commentCount = payload.commentCount;
+        if (payload.content !== undefined) updateData.content = payload.content;
+
         await prisma.post.upsert({
           where: { id: payload.id },
-          update: {
-            likeCount: payload.likeCount,
-            commentCount: payload.commentCount,
-          },
+          update: updateData,
           create: {
             id: payload.id,
             author: payload.author,
@@ -41,17 +43,21 @@ export async function POST(req: Request) {
             timestamp: payload.timestamp,
             likeCount: payload.likeCount || 0,
             commentCount: payload.commentCount || 0,
-            ipfsHash: payload.ipfsHash, // Support for heavy content
+            ipfsHash: payload.ipfsHash || null,
           },
         });
         
-        // Reward mechanism: update streak and balance (simulation of smart contract state)
-        // In a real app, you would fetch the balance/streak directly from the contract or indexer
-        await prisma.profile.updateMany({
-          where: { address: payload.author },
-          data: { balance: { increment: 10 } }, // +10 for posting
-        });
+        // Reward mechanism: update streak and balance
+        try {
+          await prisma.profile.updateMany({
+            where: { address: payload.author },
+            data: { balance: { increment: 10 } },
+          });
+        } catch (e) {
+          // Ignore if profile doesn't exist yet
+        }
         break;
+      }
 
       case 'sync_like':
         await prisma.like.upsert({
